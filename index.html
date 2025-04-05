@@ -1,86 +1,140 @@
 <!DOCTYPE html>
 <html lang="de">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Umweltdaten - M5StickCPlus</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #121212;
-      color: #f0f0f0;
-      text-align: center;
-      padding: 2rem;
-    }
-    h1 {
-      color: #4CAF50;
-    }
-    .button-group {
-      margin: 1rem 0;
-    }
-    button {
-      background-color: #333;
-      color: white;
-      border: 1px solid #4CAF50;
-      padding: 10px 20px;
-      margin: 5px;
-      cursor: pointer;
-      border-radius: 8px;
-    }
-    button.active {
-      background-color: #4CAF50;
-    }
-    iframe {
-      border: none;
-      margin: 1rem 0;
-      width: 100%;
-      max-width: 800px;
-      height: 400px;
-    }
-  </style>
-</head>
-<body>
-  <h1>M5StickCPlus - Umweltdaten</h1>
-  <div class="button-group">
-    <button id="btn-24h" class="active">24h</button>
-    <button id="btn-week">Woche</button>
-  </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Temperaturverlauf</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: 'Roboto', sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f5f5f5;
+        color: #333;
+        text-align: center;
+      }
 
-  <h2>Temperatur (°C)</h2>
-  <iframe id="tempChart" src=""></iframe>
+      header {
+        background: #007aff;
+        color: white;
+        padding: 1em;
+        font-size: 1.3em;
+        font-weight: bold;
+      }
 
-  <h2>Luftfeuchtigkeit (%)</h2>
-  <iframe id="humChart" src=""></iframe>
+      .container {
+        padding: 1em;
+      }
 
-  <script>
-    const tempChart = document.getElementById('tempChart');
-    const humChart = document.getElementById('humChart');
-    const btn24h = document.getElementById('btn-24h');
-    const btnWeek = document.getElementById('btn-week');
+      canvas {
+        max-width: 100%;
+        height: auto !important;
+      }
 
-    const channelId = 2906937;
-    const fieldTemp = 1;
-    const fieldHum = 2;
+      .buttons {
+        margin: 1em;
+      }
 
-    const updateCharts = (days) => {
-      const hours = days * 24;
-      tempChart.src = `https://thingspeak.com/channels/${channelId}/charts/${fieldTemp}?bgcolor=%23121212&color=%23FF0000&dynamic=true&results=${hours * 2}&days=${days}&type=line&title=Temperatur`;
-      humChart.src = `https://thingspeak.com/channels/${channelId}/charts/${fieldHum}?bgcolor=%23121212&color=%2300BFFF&dynamic=true&results=${hours * 2}&days=${days}&type=line&title=Luftfeuchtigkeit`;
-    };
+      button {
+        background: #007aff;
+        color: white;
+        border: none;
+        padding: 0.5em 1em;
+        font-size: 1em;
+        border-radius: 8px;
+        margin: 0.3em;
+        cursor: pointer;
+      }
 
-    btn24h.addEventListener('click', () => {
-      btn24h.classList.add('active');
-      btnWeek.classList.remove('active');
-      updateCharts(1);
-    });
+      button.active {
+        background: #0051a8;
+      }
+    </style>
+  </head>
+  <body>
+    <header>M5StickC+ Live-Daten</header>
+    <div class="container">
+      <div class="buttons">
+        <button onclick="showChart('24h')" class="active">24h</button>
+        <button onclick="showChart('7d')">7 Tage</button>
+      </div>
+      <canvas id="chart"></canvas>
+    </div>
 
-    btnWeek.addEventListener('click', () => {
-      btnWeek.classList.add('active');
-      btn24h.classList.remove('active');
-      updateCharts(7);
-    });
+    <script>
+      const channelID = 2906937;
+      const apiUrl = (days) =>
+        `https://api.thingspeak.com/channels/${channelID}/feeds.json?results=${days}`;
 
-    updateCharts(1); // Standard: 24h
-  </script>
-</body>
+      const chartCtx = document.getElementById('chart').getContext('2d');
+      let chart;
+
+      function showChart(mode) {
+        document.querySelectorAll('button').forEach((btn) => btn.classList.remove('active'));
+        document
+          .querySelector(`button[onclick="showChart('${mode}')"]`)
+          .classList.add('active');
+
+        let results = mode === '24h' ? 1440 : 7 * 1440; // 1x/min
+
+        fetch(apiUrl(results))
+          .then((res) => res.json())
+          .then((data) => {
+            const labels = data.feeds.map((f) => f.created_at.slice(11, 16));
+            const temperatures = data.feeds.map((f) => parseFloat(f.field1));
+            const humidity = data.feeds.map((f) => parseFloat(f.field2));
+
+            if (chart) chart.destroy();
+
+            chart = new Chart(chartCtx, {
+              type: 'line',
+              data: {
+                labels,
+                datasets: [
+                  {
+                    label: 'Temperatur (°C)',
+                    data: temperatures,
+                    borderColor: '#ff3b30',
+                    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+                    tension: 0.3,
+                    yAxisID: 'y1',
+                  },
+                  {
+                    label: 'Luftfeuchtigkeit (%)',
+                    data: humidity,
+                    borderColor: '#34c759',
+                    backgroundColor: 'rgba(52, 199, 89, 0.1)',
+                    tension: 0.3,
+                    yAxisID: 'y2',
+                  },
+                ],
+              },
+              options: {
+                responsive: true,
+                scales: {
+                  y1: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: '°C' },
+                  },
+                  y2: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: '%' },
+                    grid: { drawOnChartArea: false },
+                  },
+                },
+              },
+            });
+          });
+      }
+
+      showChart('24h');
+    </script>
+  </body>
 </html>
