@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Umweltdaten - M5StickCPlus</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #f0f0f0;
+      text-align: center;
+      padding: 2rem;
+    }
+    h1 {
+      color: #4CAF50;
+    }
+    .button-group {
+      margin: 1rem 0;
+    }
+    button {
+      background-color: #333;
+      color: white;
+      border: 1px solid #4CAF50;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+    button.active {
+      background-color: #4CAF50;
+    }
+    iframe {
+      border: none;
+      margin: 1rem 0;
+      width: 100%;
+      max-width: 800px;
+      height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <h1>M5StickCPlus - Umweltdaten</h1>
+  <div class="button-group">
+    <button id="btn-24h" class="active">24h</button>
+    <button id="btn-week">Woche</button>
+  </div>
+
+  <h2>Temperatur (°C)</h2>
+  <iframe id="tempChart" src=""></iframe>
+
+  <h2>Luftfeuchtigkeit (%)</h2>
+  <iframe id="humChart" src=""></iframe>
+
+  <script>
+    const tempChart = document.getElementById('tempChart');
+    const humChart = document.getElementById('humChart');
+    const btn24h = document.getElementById('btn-24h');
+    const btnWeek = document.getElementById('btn-week');
+
+    const channelId = 2906937;
+    const fieldTemp = 1;
+    const fieldHum = 2;
+
+    const updateCharts = (days) => {
+      const hours = days * 24;
+      tempChart.src = `https://thingspeak.com/channels/${channelId}/charts/${fieldTemp}?bgcolor=%23121212&color=%23FF0000&dynamic=true&results=${hours * 2}&days=${days}&type=line&title=Temperatur`;
+      humChart.src = `https://thingspeak.com/channels/${channelId}/charts/${fieldHum}?bgcolor=%23121212&color=%2300BFFF&dynamic=true&results=${hours * 2}&days=${days}&type=line&title=Luftfeuchtigkeit`;
+    };
+
+    btn24h.addEventListener('click', () => {
+      btn24h.classList.add('active');
+      btnWeek.classList.remove('active');
+      updateCharts(1);
+    });
+
+    btnWeek.addEventListener('click', () => {
+      btnWeek.classList.add('active');
+      btn24h.classList.remove('active');
+      updateCharts(7);
+    });
+
+    updateCharts(1); // Standard: 24h
+  </script>
+</body>
+</html>
